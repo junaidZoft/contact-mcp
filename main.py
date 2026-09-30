@@ -18,13 +18,37 @@ logging.basicConfig(
 )
 logger = logging.getLogger("mcp-server")
 
+
+def _with_wildcard_ports(values: list[str]) -> list[str]:
+    """For each bare host/origin (no explicit port), also allow it on any port.
+
+    The library matches the Host/Origin header exactly, or against a
+    "value:*" wildcard — nothing in between. Without this, a host configured
+    as "1.2.3.4" would reject requests arriving as "1.2.3.4:8080" (e.g. when
+    Caddy publishes on a non-default port), which is confusing to debug.
+    Values that already specify a port are left exact-only. Works for both
+    bare hosts ("1.2.3.4") and full origins ("https://1.2.3.4").
+    """
+    expanded = list(values)
+    for value in values:
+        _scheme, _sep, rest = value.partition("://")
+        host_part = rest or value
+        if ":" not in host_part:
+            expanded.append(f"{value}:*")
+    return expanded
+
+
 initialize_database()
 
 if ALLOWED_HOSTS:
+    allowed_hosts = _with_wildcard_ports(ALLOWED_HOSTS)
+    allowed_origins = _with_wildcard_ports(
+        [f"https://{host}" for host in ALLOWED_HOSTS] + [f"http://{host}" for host in ALLOWED_HOSTS]
+    )
     transport_security = TransportSecuritySettings(
         enable_dns_rebinding_protection=True,
-        allowed_hosts=ALLOWED_HOSTS,
-        allowed_origins=[f"https://{host}" for host in ALLOWED_HOSTS] + [f"http://{host}" for host in ALLOWED_HOSTS],
+        allowed_hosts=allowed_hosts,
+        allowed_origins=allowed_origins,
     )
 else:
     logger.warning("ALLOWED_HOSTS is not set — DNS-rebinding protection is disabled. Set it in production.")
