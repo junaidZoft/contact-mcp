@@ -25,7 +25,9 @@ docker compose up -d --build
 
 This runs the app behind [Caddy](https://caddyserver.com/) as a reverse proxy. Copy [.env.example](.env.example) to `.env` and set `ALLOWED_HOSTS` — compose refuses to start without it. Contact data persists in a named Docker volume (`contacts-data`) across rebuilds.
 
-[Caddyfile](Caddyfile) serves both a domain (HTTPS, automatic via Let's Encrypt — replace `your-domain.example.com` with your real one, once its A record points at this VPS) and the bare IP (plain HTTP only, since Let's Encrypt won't issue a certificate for an IP address). `ALLOWED_HOSTS` should list whichever of the two you're actually using, comma-separated. If you don't have a domain yet, just leave the domain block's placeholder as-is — it stays dormant until DNS points somewhere real — and use the IP.
+Caddy publishes on host ports **8080/8443**, not 80/443 — a common setup where the VPS already runs another reverse proxy (e.g. nginx) on the standard ports for other services. Access the app at `http://<vps-ip>:8080/`, `http://<vps-ip>:8080/docs`, and point MCP clients at `http://<vps-ip>:8080/mcp`. If ports 80/443 are actually free on your VPS, change them back to `80:80`/`443:443` in `docker-compose.yml`.
+
+[Caddyfile](Caddyfile) serves both a domain and the bare IP. **Note**: since Caddy isn't on host port 80, its automatic Let's Encrypt HTTPS for the domain block won't complete (the ACME HTTP-01 challenge needs port 80 reachable from the internet) — that only works if you switch Caddy back to 80/443, or instead reverse-proxy through your existing nginx to `mcp-server` on an internal port. `ALLOWED_HOSTS` should list whichever host(s) you're actually using, comma-separated.
 
 ## Tools
 

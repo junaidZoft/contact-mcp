@@ -2,6 +2,7 @@ services:
   mcp-server:
     build: .
     restart: unless-stopped
+    container_name: contact-mcp-server
     environment:
       - MCP_DEBUG=false
       # Comma-separated: this VPS's public IP, its domain, or both — must
@@ -18,8 +19,10 @@ services:
     image: caddy:2-alpine
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      # 80/443 already taken by another reverse proxy on this host (nginx_https).
+      # Using 8080/8443 instead — see README for what this means for HTTPS.
+      - "8080:80"
+      - "8443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
